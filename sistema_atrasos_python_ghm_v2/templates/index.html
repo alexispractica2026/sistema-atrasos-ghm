@@ -19,7 +19,7 @@
                 padding: 0 !important; 
                 margin: 0 !important;
             }
-            #comprobantePrint, #comprobanteSalidaPrint { 
+            #comprobantePrint:not(.no-print), #comprobanteSalidaPrint:not(.no-print) { 
                 display: flex !important;
                 flex-direction: column;
                 justify-content: center;
@@ -197,7 +197,7 @@
             
             <!-- FORMULARIO DINÁMICO -->
             <section class="lg:col-span-1">
-                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-800">
+                <div id="cardFormulario" class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-800">
                     <h2 id="formTitle" class="text-xl font-bold mb-5 text-slate-800 flex items-center gap-2">
                         <span>📝</span> Registro de Ingreso (Atraso)
                     </h2>
@@ -254,14 +254,14 @@
                         </div>
 
                         <!-- CAMPOS EXCLUSIVOS DE RETIRO -->
-                        <div id="camposRetiro" class="hidden space-y-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <div id="camposRetiro" class="hidden space-y-4 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                             <div>
-                                <label class="block text-xs font-bold text-blue-700 uppercase">¿Quién retira? *</label>
-                                <input type="text" id="quienRetira" class="w-full p-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nombre completo del apoderado">
+                                <label class="block text-xs font-bold text-indigo-700 uppercase">¿Quién retira? *</label>
+                                <input type="text" id="quienRetira" class="w-full p-2 bg-white border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Nombre completo del apoderado">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-blue-700 uppercase">Parentesco / Relación *</label>
-                                <input type="text" id="parentesco" class="w-full p-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ej: Madre, Padre, Abuelo">
+                                <label class="block text-xs font-bold text-indigo-700 uppercase">Parentesco / Relación *</label>
+                                <input type="text" id="parentesco" class="w-full p-2 bg-white border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Ej: Madre, Padre, Abuelo">
                             </div>
                         </div>
 
@@ -272,7 +272,7 @@
                             <textarea id="motivo" rows="2" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Selecciona una sugerencia o escribe el motivo..."></textarea>
                         </div>
 
-                        <button type="submit" id="btnSubmit" class="w-full bg-blue-800 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black py-4 rounded-xl transition shadow-lg uppercase tracking-wider">
+                        <button type="submit" id="btnSubmit" class="w-full bg-blue-800 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black py-4 rounded-xl transition shadow-lg uppercase tracking-wider text-xs">
                             Guardar e Imprimir Pase Ingreso
                         </button>
                     </form>
@@ -335,7 +335,7 @@
     </main>
 
     <!-- PASE DE INGRESO (ATRASOS) -->
-    <div id="comprobantePrint" class="print-only">
+    <div id="comprobantePrint" class="print-only no-print">
         <div class="ticket-container">
             <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
                 <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
@@ -366,7 +366,7 @@
     </div>
 
     <!-- PASE DE SALIDA (RETIROS) -->
-    <div id="comprobanteSalidaPrint" class="print-only">
+    <div id="comprobanteSalidaPrint" class="print-only no-print">
         <div class="ticket-container">
             <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
                 <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
@@ -618,21 +618,26 @@
             vistaMov.classList.remove('hidden');
             vistaMov.classList.add('grid');
 
+            const cardFormulario = document.getElementById('cardFormulario');
             const formTitle = document.getElementById('formTitle');
             const listTitle = document.getElementById('listTitle');
             const btnSubmit = document.getElementById('btnSubmit');
 
             if (modo === 'atrasos') {
+                cardFormulario.className = "bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-800";
                 formTitle.innerHTML = "<span>📝</span> Registro de Ingreso (Atraso)";
                 listTitle.innerText = "Historial de Atrasos";
+                btnSubmit.className = "w-full bg-blue-800 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black py-4 rounded-xl transition shadow-lg uppercase tracking-wider text-xs";
                 btnSubmit.innerText = "Guardar e Imprimir Pase Ingreso";
                 camposRetiro.classList.add('hidden');
                 inputQuienRetira.required = false;
                 inputParentesco.required = false;
             } else {
-                formTitle.innerHTML = "<span>🏃</span> Registro de Salida (Retiro)";
+                cardFormulario.className = "bg-white p-6 rounded-2xl shadow-xl border-t-8 border-indigo-700";
+                formTitle.innerHTML = "<span>🏃</span> Autorizar Salida (Retiro)";
                 listTitle.innerText = "Historial de Retiros";
-                btnSubmit.innerText = "Guardar e Imprimir Pase Salida";
+                btnSubmit.className = "w-full bg-indigo-700 hover:bg-indigo-800 disabled:bg-slate-400 text-white font-black py-4 rounded-xl transition shadow-lg uppercase tracking-wider text-xs";
+                btnSubmit.innerText = "Autorizar e Imprimir Pase de Salida";
                 camposRetiro.classList.remove('hidden');
                 inputQuienRetira.required = true;
                 inputParentesco.required = true;
@@ -720,12 +725,12 @@
                         <td class="p-3 text-xs font-bold whitespace-nowrap">${formatearFechaCL(reg.fecha)}<br><span class="text-slate-500">${horaCorta}</span></td>
                         <td class="p-3 text-sm font-bold uppercase">${reg.nombre}<br><span class="text-[11px] font-mono text-slate-400 font-normal">${reg.rut || 'Sin RUT'}</span></td>
                         <td class="p-3 text-xs font-semibold whitespace-nowrap">${reg.curso}</td>
-                        <td class="p-3 text-xs text-slate-600 max-w-[180px] truncate" title="${reg.motivo || ''}">${reg.motivo || '-'}</td>
+                        <td class="p-3 text-xs text-slate-600 max-w-[160px] truncate" title="${reg.motivo || ''}">${reg.motivo || '-'}</td>
                         <td class="p-3 text-center">
                             <span class="px-2 py-0.5 rounded-full text-xs font-black ${total >= 3 ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-700'}">${total}</span>
                         </td>
                         <td class="p-3 text-center whitespace-nowrap space-x-1">
-                            <button onclick="imprimirPaseIngreso(${reg.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold uppercase">Pase</button>
+                            <button onclick="imprimirPaseIngreso(${reg.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold uppercase">Pase Ingreso</button>
                             <button onclick="eliminarRegistro('atrasos', ${reg.id})" class="bg-slate-200 hover:bg-red-600 hover:text-white text-slate-600 px-2 py-1 rounded-md text-xs font-bold">🗑️</button>
                         </td>
                     `;
@@ -734,10 +739,10 @@
             } else if (modoActual === 'retiros') {
                 tablaCabecera.innerHTML = `
                     <tr class="bg-slate-100">
-                        <th class="p-3 text-xs font-black text-slate-500 uppercase">Fecha/Hora</th>
-                        <th class="p-3 text-xs font-black text-slate-500 uppercase">Estudiante / RUT</th>
-                        <th class="p-3 text-xs font-black text-slate-500 uppercase">Retira</th>
-                        <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Acción</th>
+                        <th class="p-2.5 text-xs font-black text-slate-500 uppercase">Fecha/Hora</th>
+                        <th class="p-2.5 text-xs font-black text-slate-500 uppercase">Estudiante / RUT</th>
+                        <th class="p-2.5 text-xs font-black text-slate-500 uppercase">Retira</th>
+                        <th class="p-2.5 text-xs font-black text-slate-500 uppercase text-center">Acción</th>
                     </tr>`;
 
                 const filtrados = registrosRetiros.filter(reg => {
@@ -760,12 +765,12 @@
                     const tr = document.createElement('tr');
                     tr.className = `border-b hover:bg-slate-50`;
                     tr.innerHTML = `
-                        <td class="p-3 text-xs font-bold whitespace-nowrap">${formatearFechaCL(reg.fecha)}<br><span class="text-slate-500">${horaCorta}</span></td>
-                        <td class="p-3 text-sm font-bold uppercase">${reg.nombre}<br><span class="text-[11px] text-slate-400 font-normal">${reg.rut || 'Sin RUT'} • ${reg.curso}</span></td>
-                        <td class="p-3 text-xs uppercase font-semibold">${reg.quien_retira}<br><span class="text-[10px] text-slate-400 font-normal">${reg.parentesco}</span></td>
-                        <td class="p-3 text-center whitespace-nowrap space-x-1">
-                            <button onclick="imprimirPaseSalida(${reg.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-md text-xs font-bold uppercase">Pase</button>
-                            <button onclick="eliminarRegistro('retiros', ${reg.id})" class="bg-slate-200 hover:bg-red-600 hover:text-white text-slate-600 px-2 py-1 rounded-md text-xs font-bold">🗑️</button>
+                        <td class="p-2.5 text-xs font-bold whitespace-nowrap">${formatearFechaCL(reg.fecha)}<br><span class="text-slate-500">${horaCorta}</span></td>
+                        <td class="p-2.5 text-xs font-bold uppercase">${reg.nombre}<br><span class="text-[11px] text-slate-400 font-normal">${reg.rut || 'Sin RUT'} • ${reg.curso}</span></td>
+                        <td class="p-2.5 text-xs uppercase font-semibold">${reg.quien_retira}<br><span class="text-[10px] text-slate-400 font-normal">${reg.parentesco}</span></td>
+                        <td class="p-2.5 text-center whitespace-nowrap space-x-1">
+                            <button onclick="imprimirPaseSalida(${reg.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase shadow-sm">Autorizar Salida</button>
+                            <button onclick="eliminarRegistro('retiros', ${reg.id})" class="bg-slate-200 hover:bg-red-600 hover:text-white text-slate-600 px-2 py-1.5 rounded-md text-xs font-bold">🗑️</button>
                         </td>
                     `;
                     tablaCuerpo.appendChild(tr);
@@ -819,7 +824,7 @@
                 alert("⚠️ " + err.message);
             } finally {
                 btnSubmit.disabled = false;
-                btnSubmit.innerText = modoActual === 'atrasos' ? "Guardar e Imprimir Pase Ingreso" : "Guardar e Imprimir Pase Salida";
+                btnSubmit.innerText = modoActual === 'atrasos' ? "Guardar e Imprimir Pase Ingreso" : "Autorizar e Imprimir Pase de Salida";
             }
         });
 
