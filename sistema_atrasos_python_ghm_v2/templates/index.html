@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestión Escolar - Escuela García Hurtado de Mendoza</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería SheetJS para leer archivos Excel (.xlsx, .xls, .csv) directo desde el navegador -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
         @media print {
             @page {
@@ -129,15 +131,27 @@
                     </form>
                 </div>
 
-                <!-- Carga Masiva desde Excel/CSV -->
+                <!-- Carga Masiva desde Archivo Excel / CSV -->
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
-                    <h3 class="text-sm font-black text-slate-700 uppercase mb-2">📥 Carga Masiva (Pegar desde Excel)</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-black text-slate-700 uppercase">📂 Subir Nómina Excel / CSV</h3>
+                        <button type="button" onclick="descargarPlantillaExcel()" class="text-[11px] font-bold text-blue-600 hover:underline">
+                            ⬇ Plantilla
+                        </button>
+                    </div>
                     <p class="text-xs text-slate-500 mb-3">
-                        Copia 3 columnas desde Excel (<strong>RUT | Nombre | Curso</strong>) sin encabezados y pégalas aquí para registrar todo un curso de una vez:
+                        Selecciona un archivo <strong>.xlsx, .xls o .csv</strong> desde tu computador con 3 columnas: <strong>RUT | Nombre | Curso</strong>.
                     </p>
-                    <textarea id="txtMasivo" rows="4" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono text-xs mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="21.111.111-1	JUAN PEREZ SOTO	5° Básico&#10;22.222.222-2	MARIA LOPEZ DIAZ	6° Básico"></textarea>
-                    <button type="button" onclick="importarMasivo()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition">
-                        Importar Lista de Alumnos
+
+                    <label for="archivoExcel" class="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl bg-slate-50 hover:bg-emerald-50/40 cursor-pointer transition mb-3">
+                        <span class="text-2xl mb-1">📊</span>
+                        <span id="nombreArchivoSeleccionado" class="text-xs font-bold text-slate-700 text-center">Haz clic aquí para elegir archivo Excel</span>
+                        <span class="text-[10px] text-slate-400 mt-0.5">Formatos: .xlsx, .xls, .csv</span>
+                        <input id="archivoExcel" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="actualizarNombreArchivo()">
+                    </label>
+
+                    <button type="button" onclick="importarArchivoExcel()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition shadow">
+                        Importar Archivo a la Nómina
                     </button>
                 </div>
             </section>
@@ -413,7 +427,7 @@
         const camposRetiro = document.getElementById('camposRetiro');
 
         function limpiarRut(rut) {
-            return (rut || "").replace(/[^0-9kK]/g, "").toUpperCase();
+            return String(rut || "").replace(/[^0-9kK]/g, "").toUpperCase();
         }
 
         function formatearRut(rut) {
@@ -444,7 +458,7 @@
         }
 
         function normalizarTexto(texto) {
-            return (texto || "")
+            return String(texto || "")
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
                 .replace(/\s+/g, " ")
@@ -892,29 +906,81 @@
             }
         });
 
-        async function importarMasivo() {
-            const raw = document.getElementById('txtMasivo').value.trim();
-            if (!raw) {
-                alert("⚠️ Pega primero la lista de alumnos desde Excel (RUT, Nombre y Curso).");
+        // --- IMPORTACIÓN DIRECTA DESDE ARCHIVO EXCEL (.xlsx, .xls, .csv) ---
+        function actualizarNombreArchivo() {
+            const input = document.getElementById('archivoExcel');
+            const label = document.getElementById('nombreArchivoSeleccionado');
+            if (input.files && input.files.length > 0) {
+                label.innerText = "📄 " + input.files[0].name;
+                label.className = "text-xs font-bold text-emerald-700 text-center";
+            } else {
+                label.innerText = "Haz clic aquí para elegir archivo Excel";
+                label.className = "text-xs font-bold text-slate-700 text-center";
+            }
+        }
+
+        function descargarPlantillaExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert("⚠️ No se pudo cargar el generador de Excel. Revisa tu conexión a internet.");
+                return;
+            }
+            const datosEjemplo = [
+                ["RUT", "Nombre Completo", "Curso"],
+                ["21.111.111-1", "JUAN PABLO PEREZ SOTO", "5° Básico"],
+                ["22.222.222-2", "MARIA JOSE LOPEZ DIAZ", "6° Básico"]
+            ];
+            const hoja = XLSX.utils.aoa_to_sheet(datosEjemplo);
+            const libro = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libro, hoja, "Alumnos");
+            XLSX.writeFile(libro, "Plantilla_Alumnos_GHM.xlsx");
+        }
+
+        async function importarArchivoExcel() {
+            const input = document.getElementById('archivoExcel');
+            if (!input.files || input.files.length === 0) {
+                alert("⚠️ Selecciona primero un archivo Excel (.xlsx, .xls o .csv) desde tu computador.");
                 return;
             }
 
-            const lineas = raw.split(/\r?\n/).filter(l => l.trim());
-            const estudiantes = lineas.map(linea => {
-                const sep = linea.includes('\t') ? '\t' : (linea.includes(';') ? ';' : ',');
-                const partes = linea.split(sep).map(p => p.trim());
-                return {
-                    rut: partes[0] || "",
-                    nombre: partes[1] || "",
-                    curso: partes[2] || ""
-                };
-            });
+            if (typeof XLSX === 'undefined') {
+                alert("⚠️ No se cargó la librería lectora de Excel. Recarga la página (Ctrl + F5) e inténtalo de nuevo.");
+                return;
+            }
 
             const btn = document.getElementById('btnMasivo');
             btn.disabled = true;
-            btn.innerText = "Importando...";
+            btn.innerText = "Leyendo archivo...";
 
             try {
+                const archivo = input.files[0];
+                const buffer = await archivo.arrayBuffer();
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
+                const filas = XLSX.utils.sheet_to_json(primeraHoja, { header: 1, defval: "" });
+
+                const estudiantes = [];
+                filas.forEach((fila, idx) => {
+                    const col0 = String(fila[0] || "").trim();
+                    const col1 = String(fila[1] || "").trim();
+                    const col2 = String(fila[2] || "").trim();
+
+                    if (!col0 && !col1 && !col2) return;
+                    // Saltar fila de encabezado si contiene la palabra RUT
+                    if (idx === 0 && normalizarTexto(col0).includes("RUT")) return;
+
+                    estudiantes.push({
+                        rut: col0,
+                        nombre: col1,
+                        curso: col2
+                    });
+                });
+
+                if (estudiantes.length === 0) {
+                    throw new Error("El archivo está vacío o no tiene filas con datos en las primeras 3 columnas (RUT, Nombre, Curso).");
+                }
+
+                btn.innerText = `Importando ${estudiantes.length} filas...`;
+
                 const res = await fetch('/api/estudiantes/masivo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -929,18 +995,20 @@
                 }
                 if (!res.ok) throw new Error(data.error || "Error en la importación");
 
-                let msg = `✅ Se importaron/actualizaron ${data.importados} alumnos.`;
+                let msg = `✅ Se importaron/actualizaron ${data.importados} alumnos correctamente.`;
                 if (data.errores && data.errores.length > 0) {
-                    msg += `\n\n⚠️ Observaciones (${data.errores.length}):\n` + data.errores.slice(0, 5).join('\n');
+                    msg += `\n\n⚠️ Filas omitidas (${data.errores.length}):\n` + data.errores.slice(0, 6).join('\n');
                 }
                 alert(msg);
-                document.getElementById('txtMasivo').value = "";
+
+                input.value = "";
+                actualizarNombreArchivo();
                 await cargarDatos();
             } catch (err) {
                 alert("⚠️ " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Importar Lista de Alumnos";
+                btn.innerText = "Importar Archivo a la Nómina";
             }
         }
 
