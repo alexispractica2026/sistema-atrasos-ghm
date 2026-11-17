@@ -13,6 +13,10 @@ app.secret_key = os.environ.get("SECRET_KEY", os.environ.get("ADMIN_PASSWORD", "
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
+
+ADMIN_EMAIL = "adminpagina.eghm26@daemosorno.cl"
+ADMIN_MASTER_PASSWORD = "ADMINEGHM"
 
 supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_KEY:
@@ -21,6 +25,13 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print("Error inicializando Supabase:", e)
 
+supabase_admin: Client | None = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    except Exception as e:
+        print("Error inicializando Supabase Admin:", e)
+
 
 def login_requerido(f):
     @wraps(f)
@@ -28,6 +39,17 @@ def login_requerido(f):
         if not session.get("usuario_email"):
             if request.path.startswith("/api/"):
                 return jsonify({"error": "Sesión expirada. Inicia sesión nuevamente."}), 401
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_requerido(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("es_admin"):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Acceso restringido al Administrador."}), 401
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
@@ -79,6 +101,10 @@ def normalizar_texto(texto: str) -> str:
     return texto.upper()
 
 
+# ==============================================================================
+# AUTENTICACIÓN: INSPECTORES Y ADMINISTRADOR
+# ==============================================================================
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("usuario_email"):
@@ -105,60 +131,105 @@ def login():
                     return redirect(url_for("index"))
                 error = "Correo o contraseña incorrectos."
             except Exception as e:
-                msg = str(e)
-                if "Email not confirmed" in msg:
-                    error = "Debes confirmar tu correo o desactivar 'Confirm email' en Supabase Authentication."
+                if "Email not confirmed" in str(e):
+                    error = "Cuenta pendiente de confirmación. El administrador debe activarla."
                 else:
                     error = "Correo o contraseña incorrectos."
 
-    return render_template("login.html", error=error, exito=None, modo="login")
+    return render_template("login.html", error=error, modo="login")
 
 
-@app.route("/registro", methods=["POST"])
-def registro():
-    if session.get("usuario_email"):
-        return redirect(url_for("index"))
+@app.route("/admin-login", methods=["POST"])
+def admin_login():
+    email = (request.form.get("admin_email") or "").strip().lower()
+    clave = (request.form.get("admin_password") or "").strip()
 
-    email = (request.form.get("email") or "").strip().lower()
-    password = request.form.get("password") or ""
-    password_confirm = request.form.get("password_confirm") or ""
+    if email == ADMIN_EMAIL and clave == ADMIN_MASTER_PASSWORD:
+        session["es_admin"] = True
+        return redirect(url_for("panel_admin"))
 
-    if not supabase:
-        return render_template("login.html", error="El servidor no tiene configuradas las credenciales de Supabase.", exito=None, modo="registro")
+    return render_template(
+        "login.html",
+        error="Correo o contraseña de Administrador incorrectos.",
+        modo="admin"
+    )
 
-    if not email or not password:
-        return render_template("login.html", error="Completa todos los campos para registrarte.", exito=None, modo="registro")
 
-    if len(password) < 6:
-        return render_template("login.html", error="La contraseña debe tener al menos 6 caracteres.", exito=None, modo="registro")
+@app.route("/admin")
+@admin_requerido
+def panel_admin():
+    return render_template("admin.html", service_conectado=bool(supabase_admin))
 
-    if password != password_confirm:
-        return render_template("login.html", error="Las contraseñas no coinciden.", exito=None, modo="registro")
+
+@app.route("/api/admin/usuarios", methods=["GET"])
+@admin_requerido
+def api_listar_usuarios():
+    if not supabase_admin:
+        return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
 
     try:
-        auth_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        res = auth_client.auth.sign_up({
+        res = supabase_admin.auth.admin.list_users()
+        lista_raw = res if isinstance(res, list) else getattr(res, "users", [])
+        usuarios = []
+        for u in lista_raw:
+            usuarios.append({
+                "id": getattr(u, "id", ""),
+                "email": getattr(u, "email", ""),
+                "created_at": str(getattr(u, "created_at", ""))[:10],
+                "last_sign_in_at": str(getattr(u, "last_sign_in_at", "") or "Nunca")[:10]
+            })
+        return jsonify({"usuarios": usuarios})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/usuarios", methods=["POST"])
+@admin_requerido
+def api_crear_usuario():
+    if not supabase_admin:
+        return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
+
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Ingresa un correo electrónico válido."}), 400
+    if len(password) < 6:
+        return jsonify({"error": "La contraseña debe tener al menos 6 caracteres."}), 400
+
+    try:
+        res = supabase_admin.auth.admin.create_user({
             "email": email,
-            "password": password
+            "password": password,
+            "email_confirm": True
         })
-        if res.user and res.session:
-            session["usuario_email"] = res.user.email
-            return redirect(url_for("index"))
-        elif res.user:
-            return render_template(
-                "login.html",
-                error=None,
-                exito="Cuenta creada correctamente. Si Supabase pide confirmar correo, revisa tu bandeja o inicia sesión.",
-                modo="login"
-            )
-        return render_template("login.html", error="No se pudo completar el registro.", exito=None, modo="registro")
+        user_obj = getattr(res, "user", res)
+        return jsonify({
+            "ok": True,
+            "usuario": {
+                "id": getattr(user_obj, "id", ""),
+                "email": getattr(user_obj, "email", email)
+            }
+        })
     except Exception as e:
         msg = str(e)
-        if "already registered" in msg.lower():
-            err_txt = "Este correo ya está registrado. Inicia sesión con tu contraseña."
-        else:
-            err_txt = f"Error al registrar: {msg}"
-        return render_template("login.html", error=err_txt, exito=None, modo="registro")
+        if "already been registered" in msg.lower() or "already exists" in msg.lower():
+            return jsonify({"error": "Ese correo electrónico ya tiene una cuenta registrada."}), 400
+        return jsonify({"error": msg}), 500
+
+
+@app.route("/api/admin/usuarios/<user_id>", methods=["DELETE"])
+@admin_requerido
+def api_eliminar_usuario(user_id):
+    if not supabase_admin:
+        return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
+
+    try:
+        supabase_admin.auth.admin.delete_user(user_id)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/logout")
@@ -166,6 +237,10 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+
+# ==============================================================================
+# SISTEMA PRINCIPAL DE INSPECTORÍA
+# ==============================================================================
 
 @app.route("/")
 @login_requerido
