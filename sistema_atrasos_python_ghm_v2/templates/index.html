@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestión Escolar - Escuela García Hurtado de Mendoza</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería SheetJS para leer archivos Excel (.xlsx, .xls, .csv) directo desde el navegador -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
         @media print {
@@ -51,7 +50,6 @@
     <header class="bg-blue-900 text-white shadow-md no-print">
         <div class="container mx-auto px-5 py-3.5 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-4">
-                <!-- EMBLEMA OFICIAL ESCUELA GARCÍA HURTADO DE MENDOZA -->
                 <div class="bg-white rounded-full p-1 shadow-md border-2 border-yellow-400 w-14 h-14 flex items-center justify-center shrink-0 overflow-hidden">
                     <img src="/static/img/logo-ghm.png" alt="Emblema Escuela García Hurtado de Mendoza" class="w-full h-full object-contain">
                 </div>
@@ -71,9 +69,14 @@
                     </div>
                 </div>
             </div>
-            <div class="text-right">
-                <p id="clock" class="text-lg font-mono font-bold text-yellow-400"></p>
-                <p class="text-[10px] text-blue-100 uppercase">Gestión de Asistencia</p>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p id="clock" class="text-lg font-mono font-bold text-yellow-400"></p>
+                    <p class="text-[10px] text-blue-100">{{ usuario_email or 'Inspectoría General' }}</p>
+                </div>
+                <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-xs font-bold uppercase transition shadow">
+                    Salir
+                </a>
             </div>
         </div>
         <!-- Selector de Pestañas (Registro de Alumnos va primero) -->
@@ -553,6 +556,10 @@
         async function cargarDatos() {
             try {
                 const res = await fetch('/api/datos');
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Error al cargar datos");
 
@@ -906,7 +913,6 @@
             }
         });
 
-        // --- IMPORTACIÓN DIRECTA DESDE ARCHIVO EXCEL (.xlsx, .xls, .csv) ---
         function actualizarNombreArchivo() {
             const input = document.getElementById('archivoExcel');
             const label = document.getElementById('nombreArchivoSeleccionado');
@@ -965,7 +971,6 @@
                     const col2 = String(fila[2] || "").trim();
 
                     if (!col0 && !col1 && !col2) return;
-                    // Saltar fila de encabezado si contiene la palabra RUT
                     if (idx === 0 && normalizarTexto(col0).includes("RUT")) return;
 
                     estudiantes.push({
@@ -1097,7 +1102,6 @@
             setTimeout(() => { window.print(); }, 300);
         }
 
-        // Arranque inicial en Registro de Alumnos
         setInputsActuales(true);
         updateClock();
         cambiarModo('estudiantes');
