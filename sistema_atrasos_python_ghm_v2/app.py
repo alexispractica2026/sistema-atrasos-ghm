@@ -1,13 +1,15 @@
 import os
 import re
 import unicodedata
-from flask import Flask, render_template, request, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", os.environ.get("ADMIN_PASSWORD", "ghm-osorno-secret-2026"))
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
@@ -18,6 +20,17 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
         print("Error inicializando Supabase:", e)
+
+
+def login_requerido(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("usuario_email"):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Sesión expirada. Inicia sesión nuevamente."}), 401
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
 
 
 def limpiar_rut(rut: str) -> str:
@@ -66,12 +79,51 @@ def normalizar_texto(texto: str) -> str:
     return texto.upper()
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("usuario_email"):
+        return redirect(url_for("index"))
+
+    error = None
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+
+        if not supabase:
+            error = "El servidor no tiene configuradas las credenciales de Supabase."
+        elif not email or not password:
+            error = "Ingresa tu correo electrónico y contraseña."
+        else:
+            try:
+                auth_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+                res = auth_client.auth.sign_in_with_password({
+                    "email": email,
+                    "password": password
+                })
+                if res.user:
+                    session["usuario_email"] = res.user.email
+                    return redirect(url_for("index"))
+                error = "Correo o contraseña incorrectos."
+            except Exception:
+                error = "Correo o contraseña incorrectos."
+
+    return render_template("login.html", error=error, conectado=bool(supabase))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_requerido
 def index():
-    return render_template("index.html", conectado=bool(supabase))
+    return render_template("index.html", conectado=bool(supabase), usuario_email=session.get("usuario_email"))
 
 
 @app.route("/api/datos", methods=["GET"])
+@login_requerido
 def api_datos():
     if not supabase:
         return jsonify({"error": "Faltan variables de entorno SUPABASE_URL y SUPABASE_KEY en el servidor."}), 500
@@ -91,6 +143,7 @@ def api_datos():
 
 
 @app.route("/api/estudiantes", methods=["POST"])
+@login_requerido
 def crear_estudiante():
     if not supabase:
         return jsonify({"error": "Base de datos no conectada."}), 500
@@ -119,6 +172,7 @@ def crear_estudiante():
 
 
 @app.route("/api/estudiantes/masivo", methods=["POST"])
+@login_requerido
 def carga_masiva_estudiantes():
     if not supabase:
         return jsonify({"error": "Base de datos no conectada."}), 500
@@ -161,6 +215,7 @@ def carga_masiva_estudiantes():
 
 
 @app.route("/api/estudiantes/<path:rut>", methods=["DELETE"])
+@login_requerido
 def eliminar_estudiante(rut):
     if not supabase:
         return jsonify({"error": "Base de datos no conectada."}), 500
@@ -178,6 +233,7 @@ def eliminar_estudiante(rut):
 
 
 @app.route("/api/atrasos", methods=["POST"])
+@login_requerido
 def registrar_atraso():
     if not supabase:
         return jsonify({"error": "Base de datos no conectada."}), 500
@@ -224,6 +280,7 @@ def registrar_atraso():
 
 
 @app.route("/api/retiros", methods=["POST"])
+@login_requerido
 def registrar_retiro():
     if not supabase:
         return jsonify({"error": "Base de datos no conectada."}), 500
@@ -274,6 +331,7 @@ def registrar_retiro():
 
 
 @app.route("/api/<tabla>/<int:reg_id>", methods=["DELETE"])
+@login_requerido
 def eliminar_registro(tabla, reg_id):
     if tabla not in ("atrasos", "retiros"):
         return jsonify({"error": "Tabla no válida."}), 400
