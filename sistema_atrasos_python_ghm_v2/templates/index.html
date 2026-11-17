@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        .ticket-oculto {
-            display: none !important;
+        #areaImpresionUnica {
+            display: none;
         }
         @media print {
             @page {
@@ -21,10 +21,7 @@
                 padding: 0 !important; 
                 margin: 0 !important;
             }
-            .ticket-oculto {
-                display: none !important;
-            }
-            .ticket-activo { 
+            #areaImpresionUnica { 
                 display: flex !important;
                 flex-direction: column;
                 justify-content: center;
@@ -83,7 +80,6 @@
                 </a>
             </div>
         </div>
-        <!-- Selector de Pestañas (Registro de Alumnos va primero) -->
         <div class="container mx-auto flex flex-wrap gap-6 px-5 pt-1">
             <button onclick="cambiarModo('estudiantes')" id="btnTabEstudiantes" class="pb-2 text-sm font-bold uppercase tracking-wide tab-active transition-all">🎓 Registro de Alumnos</button>
             <button onclick="cambiarModo('atrasos')" id="btnTabAtrasos" class="pb-2 text-sm font-bold uppercase tracking-wide text-blue-300 hover:text-white transition-all">📝 Ingreso (Atrasos)</button>
@@ -100,11 +96,10 @@
         {% endif %}
 
         <!-- =============================================================== -->
-        <!-- VISTA PRINCIPAL (1°): REGISTRO Y CATÁLOGO DE ALUMNOS            -->
+        <!-- VISTA 1: REGISTRO Y CATÁLOGO DE ALUMNOS                         -->
         <!-- =============================================================== -->
         <div id="vistaEstudiantes" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <section class="lg:col-span-1 space-y-6">
-                <!-- Registro Individual -->
                 <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-emerald-600">
                     <h2 class="text-lg font-bold mb-4 text-slate-800">🎓 Registrar / Actualizar Alumno</h2>
                     <form id="formEstudiante" class="space-y-4">
@@ -138,7 +133,6 @@
                     </form>
                 </div>
 
-                <!-- Carga Masiva desde Archivo Excel / CSV -->
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-black text-slate-700 uppercase">📂 Subir Nómina Excel / CSV</h3>
@@ -163,7 +157,6 @@
                 </div>
             </section>
 
-            <!-- Tabla de Alumnos Registrados -->
             <section class="lg:col-span-2">
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
                     <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
@@ -198,8 +191,6 @@
         <!-- VISTAS 2 y 3: INGRESO (ATRASOS) Y SALIDA (RETIROS)              -->
         <!-- =============================================================== -->
         <div id="vistaMovimientos" class="hidden grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- FORMULARIO DINÁMICO -->
             <section class="lg:col-span-1">
                 <div id="cardFormulario" class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-800">
                     <h2 id="formTitle" class="text-xl font-bold mb-5 text-slate-800 flex items-center gap-2">
@@ -221,7 +212,6 @@
                             </div>
                         </div>
 
-                        <!-- BÚSQUEDA POR RUT -->
                         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-xs font-bold text-slate-600 uppercase">RUT del Estudiante</label>
@@ -257,7 +247,6 @@
                             </select>
                         </div>
 
-                        <!-- CAMPOS EXCLUSIVOS DE RETIRO -->
                         <div id="camposRetiro" class="hidden space-y-4 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                             <div>
                                 <label class="block text-xs font-bold text-indigo-700 uppercase">¿Quién retira? *</label>
@@ -269,7 +258,6 @@
                             </div>
                         </div>
 
-                        <!-- OBSERVACIÓN CON SUGERENCIAS RÁPIDAS -->
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Observación / Motivo</label>
                             <div id="sugerenciasMotivo" class="flex flex-wrap gap-1.5 mb-2"></div>
@@ -283,7 +271,6 @@
                 </div>
             </section>
 
-            <!-- LISTADO DINÁMICO -->
             <section class="lg:col-span-2">
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
                     <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
@@ -301,7 +288,6 @@
                         </div>
                     </div>
 
-                    <!-- BARRA DE FILTROS -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
                         <div>
                             <input type="text" id="filtroNombre" oninput="renderizar()" placeholder="🔍 Buscar por RUT o Nombre..." class="w-full p-2 bg-white border rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500">
@@ -338,66 +324,8 @@
         </div>
     </main>
 
-    <!-- PASE DE INGRESO (ATRASOS) -->
-    <div id="comprobantePrint" class="ticket-oculto">
-        <div class="ticket-container">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
-                <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
-                <div style="text-align: left;">
-                    <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
-                    <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE INGRESO A SALA</p>
-                </div>
-            </div>
-            <div style="font-size: 20px; line-height: 2.3; margin-bottom: 50px;">
-                <p>Se autoriza el ingreso al aula del estudiante:</p>
-                <p style="border-bottom: 1px dotted black;"><strong>NOMBRE:</strong> <span id="comp-nombre" style="font-size: 22px; text-transform: uppercase; margin-left: 10px;"></span></p>
-                <div style="display: flex; justify-content: space-between;">
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>RUT:</strong> <span id="comp-rut" style="margin-left: 10px;"></span></p>
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>CURSO:</strong> <span id="comp-curso" style="margin-left: 10px;"></span></p>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>FECHA:</strong> <span id="comp-fecha" style="margin-left: 10px;"></span></p>
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>HORA LLEGADA:</strong> <span id="comp-hora" style="margin-left: 10px;"></span></p>
-                </div>
-                <p style="border-bottom: 1px dotted black;"><strong>MOTIVO:</strong> <span id="comp-motivo" style="margin-left: 10px; font-size: 17px;"></span></p>
-                <p style="border-bottom: 1px dotted black;"><strong>ATRASOS ACUMULADOS:</strong> <span id="comp-total" style="margin-left: 10px; font-weight: bold;"></span></p>
-            </div>
-            <div style="margin-top: 90px; display: flex; justify-content: space-around; text-align: center;">
-                <div style="width: 250px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 14px; font-weight: bold;">INSPECTORÍA</p></div>
-                <div style="width: 250px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 14px; font-weight: bold;">PROFESOR(A)</p></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PASE DE SALIDA (RETIROS) -->
-    <div id="comprobanteSalidaPrint" class="ticket-oculto">
-        <div class="ticket-container">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
-                <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
-                <div style="text-align: left;">
-                    <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
-                    <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE SALIDA (RETIRO ANTICIPADO)</p>
-                </div>
-            </div>
-            <div style="font-size: 20px; line-height: 2.2; margin-bottom: 40px;">
-                <p>Se autoriza la salida del establecimiento del estudiante:</p>
-                <p style="border-bottom: 1px dotted black;"><strong>NOMBRE:</strong> <span id="out-nombre" style="text-transform: uppercase; font-weight: bold;"></span></p>
-                <div style="display: flex; justify-content: space-between;">
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>RUT:</strong> <span id="out-rut"></span></p>
-                    <p style="width: 48%; border-bottom: 1px dotted black;"><strong>CURSO:</strong> <span id="out-curso"></span></p>
-                </div>
-                <p style="border-bottom: 1px dotted black;"><strong>FECHA / HORA:</strong> <span id="out-fecha-hora"></span></p>
-                <p style="border-bottom: 1px dotted black;"><strong>RETIRADO POR:</strong> <span id="out-quien" style="text-transform: uppercase;"></span></p>
-                <p style="border-bottom: 1px dotted black;"><strong>PARENTESCO:</strong> <span id="out-parentesco"></span></p>
-                <p style="border-bottom: 1px dotted black;"><strong>MOTIVO SALIDA:</strong> <span id="out-motivo" style="font-size: 16px;"></span></p>
-            </div>
-            <div style="margin-top: 80px; display: flex; justify-content: space-around; text-align: center;">
-                <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA APODERADO</p></div>
-                <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA INSPECTORÍA</p></div>
-                <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">TIMBRE ESCUELA</p></div>
-            </div>
-        </div>
-    </div>
+    <!-- CONTENEDOR ÚNICO DE IMPRESIÓN (Solo se carga el ticket solicitado) -->
+    <div id="areaImpresionUnica"></div>
 
     <script>
         let modoActual = 'estudiantes';
@@ -1080,19 +1008,38 @@
         function imprimirPaseIngreso(id) {
             const reg = registrosAtrasos.find(r => r.id === id);
             if (!reg) return;
-            document.getElementById('comp-nombre').innerText = reg.nombre;
-            document.getElementById('comp-rut').innerText = reg.rut || 'No registrado';
-            document.getElementById('comp-curso').innerText = reg.curso;
-            document.getElementById('comp-fecha').innerText = formatearFechaCL(reg.fecha);
-            document.getElementById('comp-hora').innerText = (reg.hora || "").slice(0, 5);
-            document.getElementById('comp-motivo').innerText = reg.motivo || 'No especificado';
-            document.getElementById('comp-total').innerText = contarAtrasosEstudiante(reg.rut, reg.nombre_normalizado);
+            const total = contarAtrasosEstudiante(reg.rut, reg.nombre_normalizado);
 
-            const divIngreso = document.getElementById('comprobantePrint');
-            const divSalida = document.getElementById('comprobanteSalidaPrint');
-
-            divSalida.className = 'ticket-oculto';
-            divIngreso.className = 'ticket-activo';
+            const area = document.getElementById('areaImpresionUnica');
+            area.innerHTML = `
+                <div class="ticket-container">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
+                        <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
+                        <div style="text-align: left;">
+                            <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
+                            <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE INGRESO A SALA</p>
+                        </div>
+                    </div>
+                    <div style="font-size: 20px; line-height: 2.3; margin-bottom: 50px;">
+                        <p>Se autoriza el ingreso al aula del estudiante:</p>
+                        <p style="border-bottom: 1px dotted black;"><strong>NOMBRE:</strong> <span style="font-size: 22px; text-transform: uppercase; margin-left: 10px;">${reg.nombre}</span></p>
+                        <div style="display: flex; justify-content: space-between;">
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>RUT:</strong> <span style="margin-left: 10px;">${reg.rut || 'No registrado'}</span></p>
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>CURSO:</strong> <span style="margin-left: 10px;">${reg.curso}</span></p>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>FECHA:</strong> <span style="margin-left: 10px;">${formatearFechaCL(reg.fecha)}</span></p>
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>HORA LLEGADA:</strong> <span style="margin-left: 10px;">${(reg.hora || '').slice(0, 5)}</span></p>
+                        </div>
+                        <p style="border-bottom: 1px dotted black;"><strong>MOTIVO:</strong> <span style="margin-left: 10px; font-size: 17px;">${reg.motivo || 'No especificado'}</span></p>
+                        <p style="border-bottom: 1px dotted black;"><strong>ATRASOS ACUMULADOS:</strong> <span style="margin-left: 10px; font-weight: bold;">${total}</span></p>
+                    </div>
+                    <div style="margin-top: 90px; display: flex; justify-content: space-around; text-align: center;">
+                        <div style="width: 250px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 14px; font-weight: bold;">INSPECTORÍA</p></div>
+                        <div style="width: 250px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 14px; font-weight: bold;">PROFESOR(A)</p></div>
+                    </div>
+                </div>
+            `;
 
             setTimeout(() => { window.print(); }, 250);
         }
@@ -1100,26 +1047,42 @@
         function imprimirPaseSalida(id) {
             const reg = registrosRetiros.find(r => r.id === id);
             if (!reg) return;
-            document.getElementById('out-nombre').innerText = reg.nombre;
-            document.getElementById('out-rut').innerText = reg.rut || 'No registrado';
-            document.getElementById('out-curso').innerText = reg.curso;
-            document.getElementById('out-fecha-hora').innerText = `${formatearFechaCL(reg.fecha)} a las ${(reg.hora || "").slice(0, 5)}`;
-            document.getElementById('out-quien').innerText = reg.quien_retira;
-            document.getElementById('out-parentesco').innerText = reg.parentesco;
-            document.getElementById('out-motivo').innerText = reg.motivo || 'No especificado';
 
-            const divIngreso = document.getElementById('comprobantePrint');
-            const divSalida = document.getElementById('comprobanteSalidaPrint');
-
-            divIngreso.className = 'ticket-oculto';
-            divSalida.className = 'ticket-activo';
+            const area = document.getElementById('areaImpresionUnica');
+            area.innerHTML = `
+                <div class="ticket-container">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
+                        <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
+                        <div style="text-align: left;">
+                            <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
+                            <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE SALIDA (RETIRO ANTICIPADO)</p>
+                        </div>
+                    </div>
+                    <div style="font-size: 20px; line-height: 2.2; margin-bottom: 40px;">
+                        <p>Se autoriza la salida del establecimiento del estudiante:</p>
+                        <p style="border-bottom: 1px dotted black;"><strong>NOMBRE:</strong> <span style="text-transform: uppercase; font-weight: bold;">${reg.nombre}</span></p>
+                        <div style="display: flex; justify-content: space-between;">
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>RUT:</strong> <span>${reg.rut || 'No registrado'}</span></p>
+                            <p style="width: 48%; border-bottom: 1px dotted black;"><strong>CURSO:</strong> <span>${reg.curso}</span></p>
+                        </div>
+                        <p style="border-bottom: 1px dotted black;"><strong>FECHA / HORA:</strong> <span>${formatearFechaCL(reg.fecha)} a las ${(reg.hora || '').slice(0, 5)}</span></p>
+                        <p style="border-bottom: 1px dotted black;"><strong>RETIRADO POR:</strong> <span style="text-transform: uppercase;">${reg.quien_retira}</span></p>
+                        <p style="border-bottom: 1px dotted black;"><strong>PARENTESCO:</strong> <span>${reg.parentesco}</span></p>
+                        <p style="border-bottom: 1px dotted black;"><strong>MOTIVO SALIDA:</strong> <span style="font-size: 16px;">${reg.motivo || 'No especificado'}</span></p>
+                    </div>
+                    <div style="margin-top: 80px; display: flex; justify-content: space-around; text-align: center;">
+                        <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA APODERADO</p></div>
+                        <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA INSPECTORÍA</p></div>
+                        <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">TIMBRE ESCUELA</p></div>
+                    </div>
+                </div>
+            `;
 
             setTimeout(() => { window.print(); }, 250);
         }
 
         window.addEventListener('afterprint', () => {
-            document.getElementById('comprobantePrint').className = 'ticket-oculto';
-            document.getElementById('comprobanteSalidaPrint').className = 'ticket-oculto';
+            document.getElementById('areaImpresionUnica').innerHTML = '';
         });
 
         setInputsActuales(true);
