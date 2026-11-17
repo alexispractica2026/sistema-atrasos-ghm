@@ -20,9 +20,6 @@ if SUPABASE_URL and SUPABASE_KEY:
         print("Error inicializando Supabase:", e)
 
 
-# ============================================================================
-# UTILIDADES DE VALIDACIÓN Y FORMATEO DE RUT CHILENO (MÓDULO 11)
-# ============================================================================
 def limpiar_rut(rut: str) -> str:
     return re.sub(r"[^0-9kK]", "", (rut or "")).upper()
 
@@ -51,8 +48,6 @@ def validar_rut_chileno(rut: str) -> bool:
         multiplo = 2 if multiplo == 7 else multiplo + 1
 
     resto = suma % 11
-    dv_esperado = "0" if resto == 11 else ("K" if resto == 10 else str(11 - resto))
-    # Caso especial cuando 11 - resto == 11 -> 0
     if 11 - resto == 11:
         dv_esperado = "0"
     elif 11 - resto == 10:
@@ -71,17 +66,9 @@ def normalizar_texto(texto: str) -> str:
     return texto.upper()
 
 
-# ============================================================================
-# RUTAS DE VISTAS Y API REST
-# ============================================================================
 @app.route("/")
 def index():
     return render_template("index.html", conectado=bool(supabase))
-
-
-@app.route("/api/estado", methods=["GET"])
-def api_estado():
-    return jsonify({"conectado": bool(supabase)})
 
 
 @app.route("/api/datos", methods=["GET"])
@@ -103,7 +90,6 @@ def api_datos():
         return jsonify({"error": str(e)}), 500
 
 
-# --- ENDPOINTS DE ESTUDIANTES ---
 @app.route("/api/estudiantes", methods=["POST"])
 def crear_estudiante():
     if not supabase:
@@ -164,7 +150,6 @@ def carga_masiva_estudiantes():
         return jsonify({"error": "No se encontraron registros válidos para importar.", "detalles": errores}), 400
 
     try:
-        # Eliminar duplicados por RUT dentro del mismo lote
         unicos = {e["rut"]: e for e in validos}.values()
         supabase.table("estudiantes").upsert(list(unicos)).execute()
         return jsonify({
@@ -192,7 +177,6 @@ def eliminar_estudiante(rut):
         return jsonify({"error": str(e)}), 500
 
 
-# --- ENDPOINTS DE ATRASOS Y RETIROS ---
 @app.route("/api/atrasos", methods=["POST"])
 def registrar_atraso():
     if not supabase:
