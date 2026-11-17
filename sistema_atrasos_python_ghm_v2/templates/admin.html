@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Cuentas - Escuela García Hurtado de Mendoza</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans">
+
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="container mx-auto px-5 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-white rounded-full p-1 shadow-md border-2 border-yellow-400 w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/static/img/logo-ghm.png" alt="Emblema Escuela García Hurtado de Mendoza" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tight">Panel de Administración de Cuentas</h1>
+                    <p class="text-slate-300 text-[10px] uppercase tracking-widest font-semibold">Escuela García Hurtado de Mendoza • Osorno</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase transition shadow">
+                    Cerrar Sesión Admin
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8 max-w-5xl">
+        {% if not service_conectado %}
+        <div class="mb-6 bg-red-50 border-l-4 border-red-600 p-4 rounded-r-xl shadow-sm">
+            <p class="font-bold text-red-900 text-sm">⚠️ Falta configurar <code>SUPABASE_SERVICE_KEY</code> en Render</p>
+            <p class="text-xs text-red-800 mt-1">Copia la clave <strong>service_role</strong> desde Supabase (<em>Project Settings > API Keys > Legacy</em>) y agrégala como variable de entorno en Render.</p>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Crear Nuevo Usuario -->
+            <section class="lg:col-span-1">
+                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-emerald-600">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4">➕ Crear Nueva Cuenta</h2>
+                    <form id="formCrearUsuario" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Correo Electrónico *</label>
+                            <input type="email" id="nuevoEmail" required placeholder="inspector@daemosorno.cl"
+                                class="w-full p-2.5 bg-slate-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña (mín. 6 caracteres) *</label>
+                            <input type="password" id="nuevoPassword" required minlength="6" placeholder="••••••••"
+                                class="w-full p-2.5 bg-slate-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <button type="submit" id="btnCrear"
+                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl transition shadow uppercase text-xs tracking-wider">
+                            Crear Usuario
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Listado de Cuentas Activas -->
+            <section class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 uppercase">Cuentas Registradas</h2>
+                            <p id="contadorUsuarios" class="text-xs text-slate-400 font-semibold">Cargando cuentas...</p>
+                        </div>
+                        <button onclick="cargarUsuarios()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold uppercase transition">
+                            🔄 Actualizar
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Correo Electrónico</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Creada</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Último Acceso</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaUsuarios"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        async function cargarUsuarios() {
+            const tbody = document.getElementById('tablaUsuarios');
+            try {
+                const res = await fetch('/api/admin/usuarios');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Error al obtener usuarios");
+
+                const usuarios = data.usuarios || [];
+                document.getElementById('contadorUsuarios').innerText = `${usuarios.length} cuenta(s) activa(s)`;
+                tbody.innerHTML = '';
+
+                if (usuarios.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">No hay cuentas creadas aún</td></tr>`;
+                    return;
+                }
+
+                usuarios.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b hover:bg-slate-50";
+                    tr.innerHTML = `
+                        <td class="p-3 text-sm font-bold text-slate-800">${u.email}</td>
+                        <td class="p-3 text-xs text-slate-500">${u.created_at}</td>
+                        <td class="p-3 text-xs text-slate-500">${u.last_sign_in_at}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="eliminarUsuario('${u.id}', '${u.email}')"
+                                class="bg-red-100 hover:bg-red-600 text-red-700 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition">
+                                🗑️ Borrar
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-600 text-xs font-bold">⚠️ ${err.message}</td></tr>`;
+            }
+        }
+
+        document.getElementById('formCrearUsuario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnCrear');
+            btn.disabled = true;
+            btn.innerText = "Creando...";
+
+            try {
+                const res = await fetch('/api/admin/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('nuevoEmail').value.trim(),
+                        password: document.getElementById('nuevoPassword').value
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "No se pudo crear el usuario");
+
+                document.getElementById('formCrearUsuario').reset();
+                alert("✅ Cuenta creada correctamente.");
+                await cargarUsuarios();
+            } catch (err) {
+                alert("⚠️ " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Crear Usuario";
+            }
+        });
+
+        async function eliminarUsuario(id, email) {
+            if (!confirm(`¿Seguro que deseas eliminar permanentemente la cuenta ${email}?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/usuarios/${encodeURIComponent(id)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Error al eliminar usuario");
+
+                await cargarUsuarios();
+            } catch (err) {
+                alert("⚠️ " + err.message);
+            }
+        }
+
+        cargarUsuarios();
+    </script>
+
+</body>
+</html>
