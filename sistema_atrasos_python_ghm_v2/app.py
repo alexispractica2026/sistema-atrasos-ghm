@@ -104,10 +104,61 @@ def login():
                     session["usuario_email"] = res.user.email
                     return redirect(url_for("index"))
                 error = "Correo o contraseña incorrectos."
-            except Exception:
-                error = "Correo o contraseña incorrectos."
+            except Exception as e:
+                msg = str(e)
+                if "Email not confirmed" in msg:
+                    error = "Debes confirmar tu correo o desactivar 'Confirm email' en Supabase Authentication."
+                else:
+                    error = "Correo o contraseña incorrectos."
 
-    return render_template("login.html", error=error, conectado=bool(supabase))
+    return render_template("login.html", error=error, exito=None, modo="login")
+
+
+@app.route("/registro", methods=["POST"])
+def registro():
+    if session.get("usuario_email"):
+        return redirect(url_for("index"))
+
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    password_confirm = request.form.get("password_confirm") or ""
+
+    if not supabase:
+        return render_template("login.html", error="El servidor no tiene configuradas las credenciales de Supabase.", exito=None, modo="registro")
+
+    if not email or not password:
+        return render_template("login.html", error="Completa todos los campos para registrarte.", exito=None, modo="registro")
+
+    if len(password) < 6:
+        return render_template("login.html", error="La contraseña debe tener al menos 6 caracteres.", exito=None, modo="registro")
+
+    if password != password_confirm:
+        return render_template("login.html", error="Las contraseñas no coinciden.", exito=None, modo="registro")
+
+    try:
+        auth_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        res = auth_client.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+        if res.user and res.session:
+            session["usuario_email"] = res.user.email
+            return redirect(url_for("index"))
+        elif res.user:
+            return render_template(
+                "login.html",
+                error=None,
+                exito="Cuenta creada correctamente. Si Supabase pide confirmar correo, revisa tu bandeja o inicia sesión.",
+                modo="login"
+            )
+        return render_template("login.html", error="No se pudo completar el registro.", exito=None, modo="registro")
+    except Exception as e:
+        msg = str(e)
+        if "already registered" in msg.lower():
+            err_txt = "Este correo ya está registrado. Inicia sesión con tu contraseña."
+        else:
+            err_txt = f"Error al registrar: {msg}"
+        return render_template("login.html", error=err_txt, exito=None, modo="registro")
 
 
 @app.route("/logout")
