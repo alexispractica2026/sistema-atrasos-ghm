@@ -2,6 +2,7 @@ import os
 import re
 import unicodedata
 from functools import wraps
+import httpx
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -11,7 +12,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.environ.get("ADMIN_PASSWORD", "ghm-osorno-secret-2026"))
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
 
@@ -24,13 +25,6 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
         print("Error inicializando Supabase:", e)
-
-supabase_admin: Client | None = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    try:
-        supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    except Exception as e:
-        print("Error inicializando Supabase Admin:", e)
 
 
 def login_requerido(f):
@@ -53,6 +47,14 @@ def admin_requerido(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
+
+
+def _admin_headers() -> dict:
+    return {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
 
 
 def limpiar_rut(rut: str) -> str:
@@ -158,25 +160,30 @@ def admin_login():
 @app.route("/admin")
 @admin_requerido
 def panel_admin():
-    return render_template("admin.html", service_conectado=bool(supabase_admin))
+    return render_template("admin.html", service_conectado=bool(SUPABASE_URL and SUPABASE_SERVICE_KEY))
 
 
 @app.route("/api/admin/usuarios", methods=["GET"])
 @admin_requerido
 def api_listar_usuarios():
-    if not supabase_admin:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
 
     try:
-        res = supabase_admin.auth.admin.list_users()
-        lista_raw = res if isinstance(res, list) else getattr(res, "users", [])
+        url = f"{SUPABASE_URL}/auth/v1/admin/users"
+        r = httpx.get(url, headers=_admin_headers(), timeout=15)
+        data = r.json()
+        if r.status_code >= 400:
+            return jsonify({"error": data.get("msg") or data.get("message") or str(data)}), r.status_code
+
+        lista_raw = data.get("users", []) if isinstance(data, dict) else data
         usuarios = []
         for u in lista_raw:
             usuarios.append({
-                "id": getattr(u, "id", ""),
-                "email": getattr(u, "email", ""),
-                "created_at": str(getattr(u, "created_at", ""))[:10],
-                "last_sign_in_at": str(getattr(u, "last_sign_in_at", "") or "Nunca")[:10]
+                "id": u.get("id", ""),
+                "email": u.get("email", ""),
+                "created_at": str(u.get("created_at") or "")[:10],
+                "last_sign_in_at": str(u.get("last_sign_in_at") or "Nunca")[:10]
             })
         return jsonify({"usuarios": usuarios})
     except Exception as e:
@@ -186,7 +193,7 @@ def api_listar_usuarios():
 @app.route("/api/admin/usuarios", methods=["POST"])
 @admin_requerido
 def api_crear_usuario():
-    if not supabase_admin:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
 
     data = request.get_json() or {}
@@ -199,34 +206,43 @@ def api_crear_usuario():
         return jsonify({"error": "La contraseña debe tener al menos 6 caracteres."}), 400
 
     try:
-        res = supabase_admin.auth.admin.create_user({
+        url = f"{SUPABASE_URL}/auth/v1/admin/users"
+        payload = {
             "email": email,
             "password": password,
             "email_confirm": True
-        })
-        user_obj = getattr(res, "user", res)
+        }
+        r = httpx.post(url, headers=_admin_headers(), json=payload, timeout=15)
+        res_data = r.json()
+        if r.status_code >= 400:
+            msg = res_data.get("msg") or res_data.get("message") or str(res_data)
+            if "already" in msg.lower():
+                return jsonify({"error": "Ese correo electrónico ya tiene una cuenta registrada."}), 400
+            return jsonify({"error": msg}), r.status_code
+
         return jsonify({
             "ok": True,
             "usuario": {
-                "id": getattr(user_obj, "id", ""),
-                "email": getattr(user_obj, "email", email)
+                "id": res_data.get("id", ""),
+                "email": res_data.get("email", email)
             }
         })
     except Exception as e:
-        msg = str(e)
-        if "already been registered" in msg.lower() or "already exists" in msg.lower():
-            return jsonify({"error": "Ese correo electrónico ya tiene una cuenta registrada."}), 400
-        return jsonify({"error": msg}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/admin/usuarios/<user_id>", methods=["DELETE"])
 @admin_requerido
 def api_eliminar_usuario(user_id):
-    if not supabase_admin:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         return jsonify({"error": "Falta configurar SUPABASE_SERVICE_KEY en las variables de entorno de Render."}), 500
 
     try:
-        supabase_admin.auth.admin.delete_user(user_id)
+        url = f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}"
+        r = httpx.delete(url, headers=_admin_headers(), timeout=15)
+        if r.status_code >= 400:
+            res_data = r.json()
+            return jsonify({"error": res_data.get("msg") or res_data.get("message") or str(res_data)}), r.status_code
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
