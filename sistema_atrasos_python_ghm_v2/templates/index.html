@@ -133,10 +133,10 @@
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
                     <h3 class="text-sm font-black text-slate-700 uppercase mb-2">📥 Carga Masiva (Pegar desde Excel)</h3>
                     <p class="text-xs text-slate-500 mb-3">
-                        Copia 3 columnas desde Excel (<strong>RUT | Nombre | Curso</strong>) y pégalas aquí para registrar todo un curso de una vez:
+                        Copia 3 columnas desde Excel (<strong>RUT | Nombre | Curso</strong>) sin encabezados y pégalas aquí para registrar todo un curso de una vez:
                     </p>
                     <textarea id="txtMasivo" rows="4" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono text-xs mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="21.111.111-1	JUAN PEREZ SOTO	5° Básico&#10;22.222.222-2	MARIA LOPEZ DIAZ	6° Básico"></textarea>
-                    <button onclick="importarMasivo()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition">
+                    <button type="button" onclick="importarMasivo()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition">
                         Importar Lista de Alumnos
                     </button>
                 </div>
@@ -894,7 +894,10 @@
 
         async function importarMasivo() {
             const raw = document.getElementById('txtMasivo').value.trim();
-            if (!raw) return;
+            if (!raw) {
+                alert("⚠️ Pega primero la lista de alumnos desde Excel (RUT, Nombre y Curso).");
+                return;
+            }
 
             const lineas = raw.split(/\r?\n/).filter(l => l.trim());
             const estudiantes = lineas.map(linea => {
@@ -917,7 +920,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ estudiantes })
                 });
-                const data = await res.json();
+                const texto = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(texto);
+                } catch (_) {
+                    throw new Error("Respuesta inesperada del servidor: " + texto.slice(0, 120));
+                }
                 if (!res.ok) throw new Error(data.error || "Error en la importación");
 
                 let msg = `✅ Se importaron/actualizaron ${data.importados} alumnos.`;
