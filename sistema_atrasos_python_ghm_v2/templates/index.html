@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión Escolar - Colegio García Hurtado de Mendoza</title>
+    <title>Sistema de Gestión Escolar - Escuela García Hurtado de Mendoza</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -47,15 +47,16 @@
 <body class="bg-slate-50 min-h-screen font-sans">
 
     <header class="bg-blue-900 text-white shadow-md no-print">
-        <div class="container mx-auto px-5 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="container mx-auto px-5 py-3.5 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-4">
-                <div class="bg-white text-blue-900 font-black rounded-full w-12 h-12 flex items-center justify-center border-2 border-yellow-500 text-lg shrink-0">
-                    GHM
+                <!-- EMBLEMA OFICIAL ESCUELA GARCÍA HURTADO DE MENDOZA -->
+                <div class="bg-white rounded-full p-1 shadow-md border-2 border-yellow-400 w-14 h-14 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/static/img/logo-ghm.png" alt="Emblema Escuela García Hurtado de Mendoza" class="w-full h-full object-contain">
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Colegio García Hurtado de Mendoza</h1>
+                    <h1 class="text-xl font-bold tracking-tight">Escuela García Hurtado de Mendoza</h1>
                     <div class="flex items-center gap-2">
-                        <p class="text-blue-200 text-[10px] uppercase tracking-widest font-semibold">Inspectoría General • Python + Supabase</p>
+                        <p class="text-blue-200 text-[10px] uppercase tracking-widest font-semibold">Inspectoría General • Osorno</p>
                         {% if conectado %}
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Conectado
@@ -73,11 +74,11 @@
                 <p class="text-[10px] text-blue-100 uppercase">Gestión de Asistencia</p>
             </div>
         </div>
-        <!-- Selector de Pestañas -->
-        <div class="container mx-auto flex flex-wrap gap-6 px-5">
-            <button onclick="cambiarModo('atrasos')" id="btnTabAtrasos" class="pb-2 text-sm font-bold uppercase tracking-wide tab-active transition-all">Ingreso (Atrasos)</button>
-            <button onclick="cambiarModo('retiros')" id="btnTabRetiros" class="pb-2 text-sm font-bold uppercase tracking-wide text-blue-300 hover:text-white transition-all">Salida (Retiros)</button>
-            <button onclick="cambiarModo('estudiantes')" id="btnTabEstudiantes" class="pb-2 text-sm font-bold uppercase tracking-wide text-blue-300 hover:text-white transition-all">🎓 Registro de Alumnos</button>
+        <!-- Selector de Pestañas (Registro de Alumnos va primero) -->
+        <div class="container mx-auto flex flex-wrap gap-6 px-5 pt-1">
+            <button onclick="cambiarModo('estudiantes')" id="btnTabEstudiantes" class="pb-2 text-sm font-bold uppercase tracking-wide tab-active transition-all">🎓 Registro de Alumnos</button>
+            <button onclick="cambiarModo('atrasos')" id="btnTabAtrasos" class="pb-2 text-sm font-bold uppercase tracking-wide text-blue-300 hover:text-white transition-all">📝 Ingreso (Atrasos)</button>
+            <button onclick="cambiarModo('retiros')" id="btnTabRetiros" class="pb-2 text-sm font-bold uppercase tracking-wide text-blue-300 hover:text-white transition-all">🏃 Salida (Retiros)</button>
         </div>
     </header>
 
@@ -85,14 +86,97 @@
         {% if not conectado %}
         <div class="mb-6 bg-red-50 border-l-4 border-red-600 p-4 rounded-r-xl shadow-sm">
             <p class="font-bold text-red-900 text-sm">⚠️ Servidor Python sin credenciales de Supabase</p>
-            <p class="text-xs text-red-800 mt-1">Configura <code>SUPABASE_URL</code> y <code>SUPABASE_KEY</code> en el archivo <code>.env</code> (local) o en <strong>Environment Variables</strong> de Render.</p>
+            <p class="text-xs text-red-800 mt-1">Configura <code>SUPABASE_URL</code> y <code>SUPABASE_KEY</code> en <strong>Environment Variables</strong> de Render y haz clic en <em>Manual Deploy > Deploy latest commit</em>.</p>
         </div>
         {% endif %}
 
         <!-- =============================================================== -->
-        <!-- VISTA 1 y 2: INGRESO (ATRASOS) Y SALIDA (RETIROS)               -->
+        <!-- VISTA PRINCIPAL (1°): REGISTRO Y CATÁLOGO DE ALUMNOS            -->
         <!-- =============================================================== -->
-        <div id="vistaMovimientos" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div id="vistaEstudiantes" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <section class="lg:col-span-1 space-y-6">
+                <!-- Registro Individual -->
+                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-emerald-600">
+                    <h2 class="text-lg font-bold mb-4 text-slate-800">🎓 Registrar / Actualizar Alumno</h2>
+                    <form id="formEstudiante" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase">RUT del Alumno *</label>
+                            <input type="text" id="estRut" required maxlength="12" placeholder="Ej: 22.345.678-9" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Nombre Completo *</label>
+                            <input type="text" id="estNombre" required placeholder="Ej: Sofía Alejandra Muñoz Pérez" class="w-full p-2.5 bg-slate-50 border rounded-lg font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Curso *</label>
+                            <select id="estCurso" required class="w-full p-2.5 bg-slate-50 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="">Seleccionar curso...</option>
+                                <option value="Pre-Kinder">Pre-Kinder</option>
+                                <option value="Kinder">Kinder</option>
+                                <option value="1° Básico">1° Básico</option>
+                                <option value="2° Básico">2° Básico</option>
+                                <option value="3° Básico">3° Básico</option>
+                                <option value="4° Básico">4° Básico</option>
+                                <option value="5° Básico">5° Básico</option>
+                                <option value="6° Básico">6° Básico</option>
+                                <option value="7° Básico">7° Básico</option>
+                                <option value="8° Básico">8° Básico</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="btnGuardarEst" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl transition shadow uppercase text-xs tracking-wider">
+                            Guardar Alumno
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Carga Masiva desde Excel/CSV -->
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                    <h3 class="text-sm font-black text-slate-700 uppercase mb-2">📥 Carga Masiva (Pegar desde Excel)</h3>
+                    <p class="text-xs text-slate-500 mb-3">
+                        Copia 3 columnas desde Excel (<strong>RUT | Nombre | Curso</strong>) y pégalas aquí para registrar todo un curso de una vez:
+                    </p>
+                    <textarea id="txtMasivo" rows="4" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono text-xs mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="21.111.111-1	JUAN PEREZ SOTO	5° Básico&#10;22.222.222-2	MARIA LOPEZ DIAZ	6° Básico"></textarea>
+                    <button onclick="importarMasivo()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition">
+                        Importar Lista de Alumnos
+                    </button>
+                </div>
+            </section>
+
+            <!-- Tabla de Alumnos Registrados -->
+            <section class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800 uppercase">Nómina de Alumnos Registrados</h2>
+                            <p id="contadorEstudiantes" class="text-xs text-slate-400 font-semibold">0 estudiantes registrados</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="filtroEstudiantes" oninput="renderizarEstudiantes()" placeholder="🔍 Filtrar por RUT, nombre o curso..." class="p-2 bg-slate-50 border rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <table class="w-full text-left">
+                            <thead class="sticky top-0 bg-slate-100">
+                                <tr>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">RUT</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Nombre Completo</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Curso</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Atrasos</th>
+                                    <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEstudiantesCuerpo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VISTAS 2 y 3: INGRESO (ATRASOS) Y SALIDA (RETIROS)              -->
+        <!-- =============================================================== -->
+        <div id="vistaMovimientos" class="hidden grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- FORMULARIO DINÁMICO -->
             <section class="lg:col-span-1">
@@ -231,97 +315,17 @@
                 </div>
             </section>
         </div>
-
-        <!-- =============================================================== -->
-        <!-- VISTA 3: REGISTRO Y CATÁLOGO DE ALUMNOS                         -->
-        <!-- =============================================================== -->
-        <div id="vistaEstudiantes" class="hidden grid-cols-1 lg:grid-cols-3 gap-8">
-            <section class="lg:col-span-1 space-y-6">
-                <!-- Registro Individual -->
-                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-emerald-600">
-                    <h2 class="text-lg font-bold mb-4 text-slate-800">🎓 Registrar / Actualizar Alumno</h2>
-                    <form id="formEstudiante" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase">RUT del Alumno *</label>
-                            <input type="text" id="estRut" required maxlength="12" placeholder="Ej: 22.345.678-9" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase">Nombre Completo *</label>
-                            <input type="text" id="estNombre" required placeholder="Ej: Sofía Alejandra Muñoz Pérez" class="w-full p-2.5 bg-slate-50 border rounded-lg font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase">Curso *</label>
-                            <select id="estCurso" required class="w-full p-2.5 bg-slate-50 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                <option value="">Seleccionar curso...</option>
-                                <option value="Pre-Kinder">Pre-Kinder</option>
-                                <option value="Kinder">Kinder</option>
-                                <option value="1° Básico">1° Básico</option>
-                                <option value="2° Básico">2° Básico</option>
-                                <option value="3° Básico">3° Básico</option>
-                                <option value="4° Básico">4° Básico</option>
-                                <option value="5° Básico">5° Básico</option>
-                                <option value="6° Básico">6° Básico</option>
-                                <option value="7° Básico">7° Básico</option>
-                                <option value="8° Básico">8° Básico</option>
-                            </select>
-                        </div>
-                        <button type="submit" id="btnGuardarEst" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl transition shadow uppercase text-xs tracking-wider">
-                            Guardar Alumno
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Carga Masiva desde Excel/CSV -->
-                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
-                    <h3 class="text-sm font-black text-slate-700 uppercase mb-2">📥 Carga Masiva (Pegar desde Excel)</h3>
-                    <p class="text-xs text-slate-500 mb-3">
-                        Copia 3 columnas desde Excel (<strong>RUT | Nombre | Curso</strong>) y pégalas aquí para registrar todo un curso de una vez:
-                    </p>
-                    <textarea id="txtMasivo" rows="4" class="w-full p-2.5 bg-slate-50 border rounded-lg font-mono text-xs mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="21.111.111-1	JUAN PEREZ SOTO	5° Básico&#10;22.222.222-2	MARIA LOPEZ DIAZ	6° Básico"></textarea>
-                    <button onclick="importarMasivo()" id="btnMasivo" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase transition">
-                        Importar Lista de Alumnos
-                    </button>
-                </div>
-            </section>
-
-            <!-- Tabla de Alumnos Registrados -->
-            <section class="lg:col-span-2">
-                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
-                    <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800 uppercase">Nómina de Alumnos Registrados</h2>
-                            <p id="contadorEstudiantes" class="text-xs text-slate-400 font-semibold">0 estudiantes registrados</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="filtroEstudiantes" oninput="renderizarEstudiantes()" placeholder="🔍 Filtrar por RUT, nombre o curso..." class="p-2 bg-slate-50 border rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-emerald-500">
-                        </div>
-                    </div>
-
-                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
-                        <table class="w-full text-left">
-                            <thead class="sticky top-0 bg-slate-100">
-                                <tr>
-                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">RUT</th>
-                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Nombre Completo</th>
-                                    <th class="p-3 text-xs font-black text-slate-500 uppercase">Curso</th>
-                                    <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Atrasos</th>
-                                    <th class="p-3 text-xs font-black text-slate-500 uppercase text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaEstudiantesCuerpo"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-        </div>
     </main>
 
     <!-- PASE DE INGRESO (ATRASOS) -->
     <div id="comprobantePrint" class="print-only">
         <div class="ticket-container">
-            <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
-                <h1 style="margin: 0; font-size: 28px; text-transform: uppercase; font-weight: 900;">Colegio García Hurtado de Mendoza</h1>
-                <p style="margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">AUTORIZACIÓN DE INGRESO A SALA</p>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
+                <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
+                <div style="text-align: left;">
+                    <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
+                    <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE INGRESO A SALA</p>
+                </div>
             </div>
             <div style="font-size: 20px; line-height: 2.3; margin-bottom: 50px;">
                 <p>Se autoriza el ingreso al aula del estudiante:</p>
@@ -347,9 +351,12 @@
     <!-- PASE DE SALIDA (RETIROS) -->
     <div id="comprobanteSalidaPrint" class="print-only">
         <div class="ticket-container">
-            <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
-                <h1 style="margin: 0; font-size: 28px; text-transform: uppercase; font-weight: 900;">Colegio García Hurtado de Mendoza</h1>
-                <p style="margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">AUTORIZACIÓN DE SALIDA (RETIRO ANTICIPADO)</p>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 3px solid black; padding-bottom: 20px; margin-bottom: 30px;">
+                <img src="/static/img/logo-ghm.png" alt="Logo Escuela García Hurtado de Mendoza" style="width: 68px; height: 68px; object-fit: contain;">
+                <div style="text-align: left;">
+                    <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900;">Escuela García Hurtado de Mendoza</h1>
+                    <p style="margin: 6px 0 0 0; font-size: 15px; font-weight: bold;">AUTORIZACIÓN DE SALIDA (RETIRO ANTICIPADO)</p>
+                </div>
             </div>
             <div style="font-size: 20px; line-height: 2.2; margin-bottom: 40px;">
                 <p>Se autoriza la salida del establecimiento del estudiante:</p>
@@ -366,19 +373,18 @@
             <div style="margin-top: 80px; display: flex; justify-content: space-around; text-align: center;">
                 <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA APODERADO</p></div>
                 <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">FIRMA INSPECTORÍA</p></div>
-                <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">TIMBRE COLEGIO</p></div>
+                <div style="width: 200px;"><div style="border-top: 2px solid black;"></div><p style="font-size: 12px; font-weight: bold;">TIMBRE ESCUELA</p></div>
             </div>
         </div>
     </div>
 
     <script>
-        let modoActual = 'atrasos';
+        let modoActual = 'estudiantes';
         let estudiantesCatalogo = [];
         let registrosAtrasos = [];
         let registrosRetiros = [];
         let horaEditadaManualmente = false;
 
-        // Sugerencias rápidas de motivos
         const MOTIVOS_ATRASO = [
             "Locomoción / Tráfico",
             "Control Médico / Dental",
@@ -406,9 +412,6 @@
         const inputMotivo = document.getElementById('motivo');
         const camposRetiro = document.getElementById('camposRetiro');
 
-        // =====================================================================
-        // UTILIDADES DE RUT CHILENO EN CLIENTE
-        // =====================================================================
         function limpiarRut(rut) {
             return (rut || "").replace(/[^0-9kK]/g, "").toUpperCase();
         }
@@ -455,9 +458,6 @@
             return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : fechaISO;
         }
 
-        // =====================================================================
-        // AUTOCOMPLETADO INTELIGENTE POR RUT Y NOMBRE
-        // =====================================================================
         rutInput.addEventListener('input', () => {
             const limpio = limpiarRut(rutInput.value);
             if (limpio.length >= 2) {
@@ -497,7 +497,6 @@
             }
         });
 
-        // Formatear RUT también en pestaña Registro de Alumnos
         document.getElementById('estRut').addEventListener('input', (e) => {
             const limpio = limpiarRut(e.target.value);
             if (limpio.length >= 2) e.target.value = formatearRut(limpio);
@@ -515,9 +514,6 @@
             }
         });
 
-        // =====================================================================
-        // CHIPS DE SUGERENCIAS DE MOTIVOS
-        // =====================================================================
         function renderizarSugerenciasMotivos() {
             const contenedor = document.getElementById('sugerenciasMotivo');
             const lista = modoActual === 'atrasos' ? MOTIVOS_ATRASO : MOTIVOS_RETIRO;
@@ -540,9 +536,6 @@
             });
         }
 
-        // =====================================================================
-        // CARGA DE DATOS DESDE EL BACKEND PYTHON (FLASK)
-        // =====================================================================
         async function cargarDatos() {
             try {
                 const res = await fetch('/api/datos');
@@ -554,8 +547,8 @@
                 registrosRetiros = data.retiros || [];
 
                 actualizarDatalistEstudiantes();
-                renderizar();
                 renderizarEstudiantes();
+                renderizar();
             } catch (err) {
                 console.error(err);
                 document.getElementById('contadorRegistros').innerText = "Error de conexión con servidor Python.";
@@ -573,15 +566,12 @@
             });
         }
 
-        // =====================================================================
-        // NAVEGACIÓN ENTRE PESTAÑAS
-        // =====================================================================
         function cambiarModo(modo) {
             modoActual = modo;
             const tabs = {
+                estudiantes: document.getElementById('btnTabEstudiantes'),
                 atrasos: document.getElementById('btnTabAtrasos'),
-                retiros: document.getElementById('btnTabRetiros'),
-                estudiantes: document.getElementById('btnTabEstudiantes')
+                retiros: document.getElementById('btnTabRetiros')
             };
 
             Object.entries(tabs).forEach(([key, btn]) => {
@@ -595,6 +585,7 @@
 
             if (modo === 'estudiantes') {
                 vistaMov.classList.add('hidden');
+                vistaMov.classList.remove('grid');
                 vistaEst.classList.remove('hidden');
                 vistaEst.classList.add('grid');
                 renderizarEstudiantes();
@@ -604,6 +595,7 @@
             vistaEst.classList.add('hidden');
             vistaEst.classList.remove('grid');
             vistaMov.classList.remove('hidden');
+            vistaMov.classList.add('grid');
 
             const formTitle = document.getElementById('formTitle');
             const listTitle = document.getElementById('listTitle');
@@ -629,9 +621,6 @@
             renderizar();
         }
 
-        // =====================================================================
-        // RELOJ Y CONTEO DE ATRASOS (POR RUT O NOMBRE NORMALIZADO)
-        // =====================================================================
         function updateClock() {
             const ahora = new Date();
             document.getElementById('clock').innerText = ahora.toLocaleTimeString('es-CL');
@@ -666,9 +655,6 @@
             renderizar();
         }
 
-        // =====================================================================
-        // RENDERIZADO DE TABLA DE ATRASOS / RETIROS
-        // =====================================================================
         function renderizar() {
             const tablaCabecera = document.getElementById('tablaCabecera');
             const tablaCuerpo = document.getElementById('tablaCuerpo');
@@ -766,14 +752,11 @@
             }
         }
 
-        // =====================================================================
-        // GUARDAR ATRASO O RETIRO VÍA API PYTHON
-        // =====================================================================
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btnSubmit = document.getElementById('btnSubmit');
             btnSubmit.disabled = true;
-            btnSubmit.innerText = "Procesando en Python...";
+            btnSubmit.innerText = "Procesando...";
 
             const endpoint = modoActual === 'atrasos' ? '/api/atrasos' : '/api/retiros';
             const payload = {
@@ -820,7 +803,7 @@
         });
 
         async function eliminarRegistro(tabla, id) {
-            const clave = prompt("Ingrese clave de Inspectoría para eliminar (por defecto: 1234):");
+            const clave = prompt("Ingrese clave de Inspectoría para eliminar:");
             if (clave === null) return;
 
             try {
@@ -837,9 +820,6 @@
             }
         }
 
-        // =====================================================================
-        // GESTIÓN DEL CATÁLOGO DE ALUMNOS
-        // =====================================================================
         function renderizarEstudiantes() {
             const tbody = document.getElementById('tablaEstudiantesCuerpo');
             const filtro = normalizarTexto(document.getElementById('filtroEstudiantes').value);
@@ -956,7 +936,7 @@
         }
 
         async function eliminarEstudiante(rut) {
-            const clave = prompt("Ingrese clave de Inspectoría para eliminar este alumno (por defecto: 1234):");
+            const clave = prompt("Ingrese clave de Inspectoría para eliminar este alumno:");
             if (clave === null) return;
 
             try {
@@ -972,9 +952,6 @@
             }
         }
 
-        // =====================================================================
-        // EXPORTAR A EXCEL (CSV UTF-8)
-        // =====================================================================
         function exportarCSV() {
             const esAtraso = modoActual === 'atrasos';
             const datos = esAtraso ? registrosAtrasos : registrosRetiros;
@@ -1009,9 +986,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // =====================================================================
-        // IMPRESIÓN DE PASES
-        // =====================================================================
         function imprimirPaseIngreso(id) {
             const reg = registrosAtrasos.find(r => r.id === id);
             if (!reg) return;
@@ -1046,10 +1020,10 @@
             setTimeout(() => { window.print(); }, 300);
         }
 
-        // Arranque inicial
+        // Arranque inicial en Registro de Alumnos
         setInputsActuales(true);
         updateClock();
-        renderizarSugerenciasMotivos();
+        cambiarModo('estudiantes');
         cargarDatos();
     </script>
 </body>
